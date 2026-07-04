@@ -5,17 +5,16 @@ import requests
 from faker import Faker
 from flask import Flask, request
 
-# আপনার বট টোকেন
 TOKEN = "8740612328:AAEi6KFoVytwFlCT0LiWOjmCD0claIEbcrc"
 bot = telebot.TeleBot(TOKEN)
 app = Flask(__name__)
 fake = Faker()
 
-# --- নাম জেনারেটর (৭০% Female, ৩০% Male) ---
+# --- নাম জেনারেটর ---
 def get_styled_name():
     gender = 'male' if random.random() < 0.3 else 'female'
     name = fake.name_male() if gender == 'male' else fake.name_female()
-    return f"╔════════════════════════╗\n      ✨ New Name Found\n╚════════════════════════╝\n👤 **Name:** `{name}`\n⚧ **Gender:** {gender.capitalize()}\n╔════════════════════════╝"
+    return f"✨ **Name:** `{name}`\n👤 **Gender:** {gender.capitalize()}"
 
 # --- API ফাংশন ---
 def get_code_from_dongvan(email, refresh_token, client_id, service_type):
@@ -25,9 +24,9 @@ def get_code_from_dongvan(email, refresh_token, client_id, service_type):
         response = requests.post(url, json=payload, timeout=10)
         return response.json() if response.status_code == 200 else {"error": "API Error"}
     except:
-        return {"error": "Connection Timeout"}
+        return {"error": "Connection Failed"}
 
-# --- হ্যান্ডলারসমূহ ---
+# --- কমান্ড হ্যান্ডলার ---
 @bot.message_handler(commands=['start'])
 def send_welcome(message):
     markup = telebot.types.ReplyKeyboardMarkup(resize_keyboard=True)
@@ -52,7 +51,8 @@ def ask_2fa(message):
 
 def process_2fa(message):
     try:
-        key = message.text.strip()
+        # সব স্পেস এবং লাইন ব্রেক মুছে ফেলা
+        key = message.text.strip().replace(" ", "").replace("\n", "").replace("\r", "")
         totp = pyotp.TOTP(key)
         markup = telebot.types.InlineKeyboardMarkup()
         markup.add(telebot.types.InlineKeyboardButton("🔄 Generate Again", callback_data=f"2fa_{key}"))
@@ -70,14 +70,18 @@ def callback_2fa(call):
 def ask_mail_info(message):
     bot.reply_to(message, "তথ্যটি এই ফরম্যাটে দিন:\n`email|refresh_token|client_id|type`", parse_mode="Markdown")
 
-@bot.message_handler(func=lambda message: "|" in message.text and "Get Mail Code" not in message.text)
+@bot.message_handler(func=lambda message: "|" in message.text)
 def process_mail_code(message):
-    parts = [p.strip() for p in message.text.split("|")]
-    if len(parts) == 4:
-        result = get_code_from_dongvan(*parts)
+    # ডাটা থেকে সব নতুন লাইন সরিয়ে শুধুমাত্র পাইপ (|) দিয়ে স্প্লিট করা
+    clean_text = message.text.replace("\n", "").replace("\r", "").strip()
+    parts = clean_text.split("|")
+    
+    if len(parts) >= 4:
+        # যদি ইউজার অনেকগুলো একসাথে দেয়, তবে প্রথম ৪টি অংশ নেওয়া
+        result = get_code_from_dongvan(parts[0], parts[1], parts[2], parts[3])
         bot.reply_to(message, f"📩 ফলাফল:\n`{result}`", parse_mode="Markdown")
     else:
-        bot.reply_to(message, "⚠️ ভুল ফরম্যাট! আবার চেষ্টা করুন।")
+        bot.reply_to(message, "⚠️ ভুল ফরম্যাট! দয়া করে ৪টি অংশ (email|token|id|type) সঠিকভাবে পাঠান।")
 
 @app.route('/webhook', methods=['POST'])
 def webhook():
@@ -85,10 +89,6 @@ def webhook():
     update = telebot.types.Update.de_json(json_str)
     bot.process_new_updates([update])
     return 'ok', 200
-
-@app.route('/', methods=['GET'])
-def index():
-    return "Bot is running!"
 
 if __name__ == "__main__":
     app.run()
