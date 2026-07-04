@@ -8,7 +8,7 @@
   "rewrites": [
     {
       "source": "/(.*)",
-      "destination": "/functions/bot.py"
+      "destination": "functions/bot.py"
     }
   ]
 }
