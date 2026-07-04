@@ -1,13 +1,8 @@
 {
-  "functions": {
-    "functions/bot.py": {
-      "runtime": "vercel-python@4.0.0"
-    }
-  },
-  "routes": [
+  "rewrites": [
     {
-      "src": "/(.*)",
-      "dest": "functions/bot.py"
+      "source": "/(.*)",
+      "destination": "/functions/bot.py"
     }
   ]
 }
