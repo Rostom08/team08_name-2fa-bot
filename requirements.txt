@@ -1,14 +1,5 @@
-{
-  "builds": [
-    {
-      "src": "functions/bot.py",
-      "use": "@vercel/python"
-    }
-  ],
-  "rewrites": [
-    {
-      "source": "/(.*)",
-      "destination": "/functions/bot.py"
-    }
-  ]
-}
+pyTelegramBotAPI
+Flask
+requests
+Faker
+pyotp
